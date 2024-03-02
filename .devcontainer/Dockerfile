@@ -7,6 +7,7 @@ USER root
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get -y install \
+        apt-transport-https \
         lsb-release \
         software-properties-common && \
     add-apt-repository ppa:ubuntu-toolchain-r/test && \
@@ -16,6 +17,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get -y install \
         build-essential \
+        curl \
         wget \
         gnupg \
         pkg-config \
@@ -34,6 +36,17 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get -y install \
         bash-completion
+
+# Install Bazel.
+ARG BAZEL_VERSION
+RUN curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg && \
+    mv bazel-archive-keyring.gpg /usr/share/keyrings && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    apt-get update && \
+    apt-get -y install \
+        bazel \
+        bazel-${BAZEL_VERSION}
 
 # Install CMake.
 ARG CMAKE_VERSION
@@ -68,22 +81,19 @@ RUN chmod +x /tmp/llvm.sh && \
 
 # Install mold.
 ARG MOLD_VERSION
-ARG MOLD_MINOR_VERSION
-ARG MOLD_PATCH_VERSION
 ADD https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz /tmp/
 RUN tar -zxvf /tmp/mold-${MOLD_VERSION}-x86_64-linux.tar.gz -C /usr/ --strip-components=1 && \
     update-alternatives --install /usr/bin/ld ld /usr/bin/ld.mold 888
 
 # Install python.
-ARG PY_MAJOR_VERSION
-ARG PY_MINOR_VERSION
+ARG PYTHON_VERSION
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get -y install --no-install-recommends \
         zlib1g-dev \
         libssl-dev
-ADD https://www.python.org/ftp/python/${PY_MAJOR_VERSION}.${PY_MINOR_VERSION}/Python-${PY_MAJOR_VERSION}.${PY_MINOR_VERSION}.tgz /tmp/
-RUN tar -zxvf /tmp/Python-${PY_MAJOR_VERSION}.${PY_MINOR_VERSION}.tgz -C /tmp/
-WORKDIR /tmp/Python-${PY_MAJOR_VERSION}.${PY_MINOR_VERSION}/
+ADD https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz /tmp/
+RUN tar -zxvf /tmp/Python-${PYTHON_VERSION}.tgz -C /tmp/
+WORKDIR /tmp/Python-${PYTHON_VERSION}/
 RUN ./configure --prefix=/usr/ --enable-optimizations && \
     make -j && \
     make -j install

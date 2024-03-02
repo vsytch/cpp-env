@@ -4,14 +4,14 @@
 		"dockerfile": "Dockerfile",
 		"args": {
 			"UBUNTU_VERSION": "22.04",
-			"CMAKE_VERSION": "3.27.7",
+			"CMAKE_VERSION": "3.28.3",
 			"GCC_VERSION": "13",
 			"CLANG_VERSION": "17",
-			"MOLD_VERSION": "2.3.2",
-			"PY_MAJOR_VERSION": "3.12",
-			"PY_MINOR_VERSION": "0",
-			"VCPKG_VERSION": "2023.10.19",
-			"STDEXEC_VERSION": "nvhpc-23.09.rc4"
+			"MOLD_VERSION": "2.4.0",
+			"PYTHON_VERSION": "3.12.2",
+			"VCPKG_VERSION": "2024.02.14",
+			"STDEXEC_VERSION": "nvhpc-23.09.rc4",
+			"BAZEL_VERSION": "6.5.0"
 		}
 	},
 	"runArgs": [
@@ -30,7 +30,11 @@
 			"extensions": [
 				"llvm-vs-code-extensions.vscode-clangd",
 				"ms-vscode.cmake-tools",
-				"ms-vscode.cpptools"
+				"ms-vscode.cpptools",
+				"BazelBuild.vscode-bazel",
+				"StackBuild.bazel-stack-vscode",
+				"StackBuild.bazel-stack-vscode-cc",
+				"ms-python.python"
 			]
 		}
 	},
@@ -42,5 +46,10 @@
 	"postCreateCommand": "dump_cpp_env.sh",
 
 	// Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
-	"remoteUser": "vscode"
+	"remoteUser": "vscode",
+
+	"mounts": [
+		"source=${localEnv:HOME}/.cache,target=/home/vscode/.cache,type=bind,consistency=cached"
+	]
+
 }
