@@ -1,12 +1,16 @@
-ARG UBUNTU_VERSION
-FROM mcr.microsoft.com/devcontainers/base:ubuntu-${UBUNTU_VERSION}
+ARG UBUNTU_MAJOR_VERSION
+ARG UBUNTU_MINOR_VERSION
+FROM mcr.microsoft.com/devcontainers/base:ubuntu-${UBUNTU_MAJOR_VERSION}.${UBUNTU_MINOR_VERSION}
 
 USER root
+ARG UBUNTU_MAJOR_VERSION
+ARG UBUNTU_MINOR_VERSION
 
 # Prepare installation environment.
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get -y install \
+        apt-transport-https \
         lsb-release \
         software-properties-common && \
     add-apt-repository ppa:ubuntu-toolchain-r/test && \
@@ -16,6 +20,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get -y install \
         build-essential \
+        curl \
         wget \
         gnupg \
         pkg-config \
@@ -34,6 +39,17 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get -y install \
         bash-completion
+
+# Install Bazel.
+ARG BAZEL_VERSION
+RUN curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel-archive-keyring.gpg && \
+    mv bazel-archive-keyring.gpg /usr/share/keyrings && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    apt-get update && \
+    apt-get -y install \
+        bazel \
+        bazel-${BAZEL_VERSION}
 
 # Install CMake.
 ARG CMAKE_VERSION
@@ -68,26 +84,56 @@ RUN chmod +x /tmp/llvm.sh && \
 
 # Install mold.
 ARG MOLD_VERSION
-ARG MOLD_MINOR_VERSION
-ARG MOLD_PATCH_VERSION
 ADD https://github.com/rui314/mold/releases/download/v${MOLD_VERSION}/mold-${MOLD_VERSION}-x86_64-linux.tar.gz /tmp/
 RUN tar -zxvf /tmp/mold-${MOLD_VERSION}-x86_64-linux.tar.gz -C /usr/ --strip-components=1 && \
     update-alternatives --install /usr/bin/ld ld /usr/bin/ld.mold 888
 
 # Install python.
-ARG PY_MAJOR_VERSION
-ARG PY_MINOR_VERSION
+ARG PYTHON_VERSION
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get -y install --no-install-recommends \
         zlib1g-dev \
         libssl-dev
-ADD https://www.python.org/ftp/python/${PY_MAJOR_VERSION}.${PY_MINOR_VERSION}/Python-${PY_MAJOR_VERSION}.${PY_MINOR_VERSION}.tgz /tmp/
-RUN tar -zxvf /tmp/Python-${PY_MAJOR_VERSION}.${PY_MINOR_VERSION}.tgz -C /tmp/
-WORKDIR /tmp/Python-${PY_MAJOR_VERSION}.${PY_MINOR_VERSION}/
+ADD https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz /tmp/
+RUN tar -zxvf /tmp/Python-${PYTHON_VERSION}.tgz -C /tmp/
+WORKDIR /tmp/Python-${PYTHON_VERSION}/
 RUN ./configure --prefix=/usr/ --enable-optimizations && \
     make -j && \
     make -j install
 WORKDIR /tmp/
+
+# Install python modules.
+RUN pip3 install \
+    numpy
+
+# Install CUDA.
+ARG CUDA_VERSION
+ADD https://developer.download.nvidia.com/compute/cuda/${CUDA_VERSION}/local_installers/cuda_${CUDA_VERSION}_545.23.08_linux.run /tmp/
+RUN sh /tmp/cuda_${CUDA_VERSION}_545.23.08_linux.run \
+    --silent \
+    --no-drm \
+    --no-opengl-libs \
+    --toolkit
+
+# Install CUDNN.
+ARG CUDNN_VERSION
+ADD https://developer.download.nvidia.com/compute/cudnn/${CUDNN_VERSION}/local_installers/cudnn-local-repo-ubuntu${UBUNTU_MAJOR_VERSION}${UBUNTU_MINOR_VERSION}-${CUDNN_VERSION}_1.0-1_amd64.deb /tmp/
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    dpkg -i /tmp/cudnn-local-repo-ubuntu${UBUNTU_MAJOR_VERSION}${UBUNTU_MINOR_VERSION}-${CUDNN_VERSION}_1.0-1_amd64.deb && \
+    cp /var/cudnn-local-repo-ubuntu${UBUNTU_MAJOR_VERSION}${UBUNTU_MINOR_VERSION}-${CUDNN_VERSION}/cudnn-*-keyring.gpg /usr/share/keyrings/ && \
+        apt-get update && \
+        apt-get -y install \
+            cudnn
+
+# Install CUDA libraries.
+ARG NCCL_VERSION
+ADD https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${UBUNTU_MAJOR_VERSION}${UBUNTU_MINOR_VERSION}/x86_64/cuda-keyring_1.1-1_all.deb /tmp/
+RUN dpkg -i /tmp/cuda-keyring_1.1-1_all.deb
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    apt-get update && \
+    apt-get -y install \
+        libnccl2 \
+        libnccl-dev
 
 # Install vcpkg.
 ARG VCPKG_VERSION
@@ -113,6 +159,10 @@ RUN git clone https://github.com/NVIDIA/stdexec.git /usr/src/stdexec && \
     git -C /usr/src/stdexec checkout ${STDEXEC_VERSION} && \
     cmake -S /usr/src/stdexec/ -B /tmp/stdexec/build/ && \
     cmake --build /tmp/stdexec/build/ --target install
+
+# Configure CUDA.
+ENV PATH="/usr/local/cuda/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/usr/local/cuda/lib64:${LD_LIBRARY_PATH}"
 
 COPY ./scripts/dump_cpp_env.sh /usr/bin/
 
