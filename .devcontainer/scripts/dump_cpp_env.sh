@@ -9,5 +9,3 @@ clang -v
 ld -v
 python3 --version
 vcpkg version
-nvcc --version
-nvidia-smi

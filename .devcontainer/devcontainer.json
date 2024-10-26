@@ -3,14 +3,14 @@
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
-      "UBUNTU_VERSION": "22.04",
-      "CMAKE_VERSION": "3.28.3",
-      "GCC_VERSION": "13",
-      "CLANG_VERSION": "17",
-      "MOLD_VERSION": "2.4.0",
-      "PYTHON_VERSION": "3.12.2",
-      "VCPKG_VERSION": "2024.02.14",
-      "STDEXEC_VERSION": "nvhpc-23.09.rc4",
+      "UBUNTU_VERSION": "24.04",
+      "CMAKE_VERSION": "3.30.5",
+      "GCC_VERSION": "14",
+      "CLANG_VERSION": "18",
+      "MOLD_VERSION": "2.34.1",
+      "PYTHON_VERSION": "3.13.0",
+      "VCPKG_VERSION": "2024.10.21",
+      "STDEXEC_VERSION": "nvhpc-24.09",
       "BAZEL_VERSION": "6.5.0"
     }
   },

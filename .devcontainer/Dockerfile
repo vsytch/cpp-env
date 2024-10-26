@@ -23,7 +23,11 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         pkg-config \
         ninja-build \
         autoconf \
-        autoconf-archive
+        autoconf-archive \
+        libtool-bin \
+        liburing-dev \
+        zlib1g-dev \
+        libssl-dev
 
 # Debugging tools.
 RUN export DEBIAN_FRONTEND=noninteractive && \
@@ -87,10 +91,6 @@ RUN tar -zxvf /tmp/mold-${MOLD_VERSION}-x86_64-linux.tar.gz -C /usr/ --strip-com
 
 # Install python.
 ARG PYTHON_VERSION
-RUN export DEBIAN_FRONTEND=noninteractive && \
-    apt-get -y install --no-install-recommends \
-        zlib1g-dev \
-        libssl-dev
 ADD https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz /tmp/
 RUN tar -zxvf /tmp/Python-${PYTHON_VERSION}.tgz -C /tmp/
 WORKDIR /tmp/Python-${PYTHON_VERSION}/
@@ -122,7 +122,8 @@ RUN chown vscode: /usr/include/c++/${GCC_VERSION}/generator
 RUN git clone https://github.com/NVIDIA/stdexec.git /usr/src/stdexec && \
     git -C /usr/src/stdexec checkout ${STDEXEC_VERSION} && \
     cmake -S /usr/src/stdexec/ -B /tmp/stdexec/build/ && \
-    cmake --build /tmp/stdexec/build/ --target install
+    cmake --build /tmp/stdexec/build/ --parallel && \
+    cmake --install /tmp/stdexec/build/
 
 COPY ./scripts/dump_cpp_env.sh /usr/bin/
 
